@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0A0A0F;
+    --surface:   #111118;
+    --border:    #1C1C28;
+    --muted:     #3A3A4A;
+    --dim:       #6A6A7A;
+    --label:     #9A9AAA;
+    --text:      #E8E8EE;
+    --accent:    #4F8EF7;
+    --accent2:   #7B5EF8;
+    --steps-c:   #4F8EF7;
+    --cal-c:     #F7714F;
+    --active-c:  #4FF78E;
+    --streak-c:  #FF9F2E;
+    --radius:    16px;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px 16px 48px;
+  }
+
+  /* ── Header ── */
+  .header {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 32px;
+  }
+  .header-date {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .header-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+  }
+
+  /* ── Gauge cards ── */
+  .gauges {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .gauge-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 28px 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto auto;
+    gap: 4px 16px;
+    align-items: start;
+    position: relative;
+    overflow: hidden;
+  }
+  .gauge-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-color, var(--accent)), transparent);
+    opacity: 0.4;
+  }
+  .gauge-card.steps  { --accent-color: var(--steps-c); }
+  .gauge-card.cal    { --accent-color: var(--cal-c); }
+  .gauge-card.active { --accent-color: var(--active-c); }
+
+  .gauge-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--label);
+    grid-column: 1;
+    grid-row: 1;
+    padding-top: 2px;
+  }
+  .gauge-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 52px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .gauge-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+  .gauge-arc {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    align-self: center;
+    width: 72px;
+    height: 72px;
+    flex-shrink: 0;
+  }
+  .arc-track {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 3.5;
+  }
+  .arc-fill {
+    fill: none;
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .steps  .arc-fill { stroke: var(--steps-c);  filter: drop-shadow(0 0 6px #4F8EF755); }
+  .cal    .arc-fill { stroke: var(--cal-c);    filter: drop-shadow(0 0 6px #F7714F55); }
+  .active .arc-fill { stroke: var(--active-c); filter: drop-shadow(0 0 6px #4FF78E55); }
+
+  .gauge-subtext {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+    grid-column: 1;
+    grid-row: 3;
+    margin-top: 10px;
+  }
+  .gauge-subtext span { color: var(--accent-color); }
+
+  /* ── Divider ── */
+  .divider {
+    width: 100%;
+    max-width: 420px;
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* ══════════════════════════════════
+     STREAK COUNTER
+  ══════════════════════════════════ */
+  .streak-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .streak-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--streak-c), transparent);
+    opacity: 0.5;
+  }
+  /* Ambient glow behind the number */
+  .streak-card::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, #FF9F2E18 0%, transparent 70%);
+    pointer-events: none;
+    border-radius: 50%;
+    transition: opacity 0.5s;
+  }
+
+  .streak-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .streak-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .streak-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--label);
+  }
+  .streak-big {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+  .streak-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 64px;
+    font-weight: 300;
+    line-height: 1;
+    color: var(--streak-c);
+    filter: drop-shadow(0 0 18px #FF9F2E66);
+    letter-spacing: -0.03em;
+    position: relative;
+    z-index: 1;
+  }
+  .streak-word {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* Flame icon */
+  .streak-flame {
+    font-size: 42px;
+    line-height: 1;
+    filter: drop-shadow(0 0 12px #FF9F2E88);
+    animation: flicker 2.4s ease-in-out infinite;
+    position: relative;
+    z-index: 1;
+  }
+  @keyframes flicker {
+    0%, 100% { transform: scale(1) rotate(-2deg); opacity: 1; }
+    25%       { transform: scale(1.06) rotate(1deg); opacity: 0.92; }
+    50%       { transform: scale(0.97) rotate(-1deg); opacity: 1; }
+    75%       { transform: scale(1.04) rotate(2deg); opacity: 0.95; }
+  }
+
+  /* 7-dot history */
+  .streak-dots {
+    display: flex;
+    gap: 7px;
+    margin-top: 16px;
+    align-items: center;
+  }
+  .streak-dot-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    flex: 1;
+  }
+  .streak-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--border);
+    border: 1.5px solid var(--muted);
+    transition: background 0.3s, border-color 0.3s, box-shadow 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+  }
+  .streak-dot.hit {
+    background: var(--streak-c);
+    border-color: var(--streak-c);
+    box-shadow: 0 0 10px #FF9F2E55;
+  }
+  .streak-dot.today-dot {
+    border-color: var(--accent);
+  }
+  .streak-dot.today-dot.hit {
+    border-color: var(--streak-c);
+  }
+  .streak-day-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+  .streak-day-label.today-lbl { color: var(--accent); }
+
+  /* Mark today button */
+  .btn-streak {
+    width: 100%;
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid var(--streak-c);
+    border-radius: 10px;
+    color: var(--streak-c);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.07em;
+    padding: 11px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn-streak:hover { background: #FF9F2E18; }
+  .btn-streak.done {
+    background: #FF9F2E22;
+    color: var(--streak-c);
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  /* ══════════════════════════════════
+     WEEKLY BAR CHART
+  ══════════════════════════════════ */
+  .week-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .week-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--steps-c), transparent);
+    opacity: 0.3;
+  }
+  .week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 18px;
+  }
+  .week-title {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--label);
+  }
+  .week-metric-toggle {
+    display: flex;
+    gap: 2px;
+  }
+  .week-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--dim);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .week-btn.active {
+    color: var(--text);
+    border-color: var(--border);
+  }
+
+  .bars-area {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 100px;
+  }
+  .bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .bar-wrap {
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    height: 84px;
+  }
+  .bar {
+    width: 100%;
+    border-radius: 4px 4px 2px 2px;
+    background: var(--muted);
+    min-height: 3px;
+    transform-origin: bottom;
+    transform: scaleY(0);
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s;
+  }
+  .bar.hit    { background: var(--steps-c); box-shadow: 0 0 8px #4F8EF740; }
+  .bar.today  { background: var(--steps-c); box-shadow: 0 0 12px #4F8EF788; }
+  .bar.missed { background: var(--muted); }
+  .bar.future { background: var(--border); }
+
+  .bar-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.04em;
+  }
+  .bar-label.today-lbl { color: var(--accent); }
+
+  /* goal line */
+  .bars-container {
+    position: relative;
+  }
+  .goal-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: var(--muted);
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .goal-line-label {
+    position: absolute;
+    right: 0;
+    top: -14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Update section ── */
+  .update-section {
+    width: 100%;
+    max-width: 420px;
+  }
+  .update-label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 14px;
+  }
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .input-wrap label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .input-wrap input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    padding: 10px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .input-wrap input:focus { border-color: var(--accent); }
+
+  .goal-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .goal-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .goal-wrap label {
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .goal-wrap input {
+    background: transparent;
+    border: 1px solid var(--muted);
+    border-radius: 8px;
+    color: var(--dim);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 8px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .goal-wrap input:focus { border-color: var(--accent); color: var(--text); }
+
+  .btn-update {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn-update:active { opacity: 0.85; transform: scale(0.99); }
+
+  /* ── Shortcuts info ── */
+  .shortcut-info {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+  .shortcut-info summary {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+  }
+  .shortcut-info summary::after { content: ' ▸'; color: var(--muted); }
+  details[open] summary::after  { content: ' ▾'; }
+  .shortcut-body {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .step-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .step-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    min-width: 18px;
+    padding-top: 1px;
+  }
+  .step-text {
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--label);
+  }
+  .step-text code {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    color: var(--text);
+  }
+
+  .last-updated {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 6px;
+    text-align: right;
+    letter-spacing: 0.05em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .arc-fill, .bar { transition: none; }
+    .streak-flame { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <span class="header-date" id="today-date"></span>
+  <span class="header-title">ACTIVITY</span>
+</div>
+
+<!-- Gauge cards -->
+<div class="gauges">
+  <div class="gauge-card steps">
+    <div class="gauge-label">Steps</div>
+    <div class="gauge-value">
+      <span class="gauge-num" id="steps-display">0</span>
+      <span class="gauge-unit">steps</span>
+    </div>
+    <svg class="gauge-arc" viewBox="0 0 72 72">
+      <circle class="arc-track" cx="36" cy="36" r="28"/>
+      <circle class="arc-fill" id="steps-arc" cx="36" cy="36" r="28"
+        stroke-dasharray="175.9" stroke-dashoffset="175.9"
+        transform="rotate(-90 36 36)"/>
+    </svg>
+    <div class="gauge-subtext">goal <span id="steps-pct">0</span>% · target <span id="steps-goal-display">10,000</span></div>
+  </div>
+
+  <div class="gauge-card cal">
+    <div class="gauge-label">Active Calories</div>
+    <div class="gauge-value">
+      <span class="gauge-num" id="cal-display">0</span>
+      <span class="gauge-unit">kcal</span>
+    </div>
+    <svg class="gauge-arc" viewBox="0 0 72 72">
+      <circle class="arc-track" cx="36" cy="36" r="28"/>
+      <circle class="arc-fill" id="cal-arc" cx="36" cy="36" r="28"
+        stroke-dasharray="175.9" stroke-dashoffset="175.9"
+        transform="rotate(-90 36 36)"/>
+    </svg>
+    <div class="gauge-subtext">goal <span id="cal-pct">0</span>% · target <span id="cal-goal-display">500</span></div>
+  </div>
+
+  <div class="gauge-card active">
+    <div class="gauge-label">Active Minutes</div>
+    <div class="gauge-value">
+      <span class="gauge-num" id="active-display">0</span>
+      <span class="gauge-unit">min</span>
+    </div>
+    <svg class="gauge-arc" viewBox="0 0 72 72">
+      <circle class="arc-track" cx="36" cy="36" r="28"/>
+      <circle class="arc-fill" id="active-arc" cx="36" cy="36" r="28"
+        stroke-dasharray="175.9" stroke-dashoffset="175.9"
+        transform="rotate(-90 36 36)"/>
+    </svg>
+    <div class="gauge-subtext">goal <span id="active-pct">0</span>% · target <span id="active-goal-display">30</span></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Streak Counter -->
+<div class="streak-card">
+  <div class="streak-top">
+    <div class="streak-meta">
+      <div class="streak-eyebrow">Day streak</div>
+      <div class="streak-big">
+        <span class="streak-num" id="streak-num">0</span>
+        <span class="streak-word">days</span>
+      </div>
+    </div>
+    <div class="streak-flame" id="streak-flame">🔥</div>
+  </div>
+
+  <!-- 7-day dot history -->
+  <div class="streak-dots" id="streak-dots"></div>
+
+  <button class="btn-streak" id="btn-streak" onclick="markToday()">Mark today complete</button>
+</div>
+
+<div class="divider"></div>
+
+<!-- Weekly Bar Chart -->
+<div class="week-card">
+  <div class="week-header">
+    <span class="week-title">This week</span>
+    <div class="week-metric-toggle">
+      <button class="week-btn active" onclick="setWeekMetric('steps', this)">Steps</button>
+      <button class="week-btn" onclick="setWeekMetric('cal', this)">Cal</button>
+      <button class="week-btn" onclick="setWeekMetric('active', this)">Min</button>
+    </div>
+  </div>
+  <div class="bars-container">
+    <div class="bars-area" id="bars-area"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- Manual update panel -->
+<div class="update-section">
+  <div class="update-label">Today's numbers</div>
+  <div class="input-row">
+    <div class="input-wrap">
+      <label>Steps</label>
+      <input type="number" id="in-steps" placeholder="8200">
+    </div>
+    <div class="input-wrap">
+      <label>Calories</label>
+      <input type="number" id="in-cal" placeholder="340">
+    </div>
+    <div class="input-wrap">
+      <label>Minutes</label>
+      <input type="number" id="in-active" placeholder="45">
+    </div>
+  </div>
+
+  <div class="update-label" style="margin-top:14px;">Daily goals</div>
+  <div class="goal-row">
+    <div class="goal-wrap">
+      <label>Steps goal</label>
+      <input type="number" id="goal-steps" placeholder="10000">
+    </div>
+    <div class="goal-wrap">
+      <label>Cal goal</label>
+      <input type="number" id="goal-cal" placeholder="500">
+    </div>
+    <div class="goal-wrap">
+      <label>Min goal</label>
+      <input type="number" id="goal-active" placeholder="30">
+    </div>
+  </div>
+
+  <button class="btn-update" onclick="applyUpdate()">Update widget</button>
+  <div class="last-updated" id="last-updated" style="display:none;"></div>
+</div>
+
+<!-- Shortcuts bridge info -->
+<div class="shortcut-info" style="margin-top:20px;">
+  <details>
+    <summary>Set up Apple Shortcuts automation</summary>
+    <div class="shortcut-body">
+      <div class="step-item">
+        <span class="step-num">01</span>
+        <span class="step-text">Open the <strong>Shortcuts</strong> app → tap <strong>+</strong> to create a new shortcut.</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">02</span>
+        <span class="step-text">Add action: <code>Get Health Sample</code> → choose <strong>Steps</strong>, period <strong>Today</strong>.</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">03</span>
+        <span class="step-text">Repeat for <strong>Active Energy Burned</strong> and <strong>Apple Exercise Time</strong>.</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">04</span>
+        <span class="step-text">Add action: <code>Open URLs</code> and paste this page's URL with the values appended:<br><code>?steps=STEPS&cal=CAL&min=MIN</code> using the "Text" action to build the URL dynamically.</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">05</span>
+        <span class="step-text">Add an <strong>Automation</strong> (Personal) to run this shortcut on a schedule — e.g. every hour or at morning/noon/evening.</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">06</span>
+        <span class="step-text">When the page opens with URL params, it reads them automatically — no manual entry needed.</span>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+  /* ─────────────────────────────────────
+     CONSTANTS & STATE
+  ───────────────────────────────────── */
+  const CIRCUMFERENCE = 2 * Math.PI * 28;
+  const DAY_LABELS = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const SHORT_DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+
+  const state = {
+    steps: 0, stepsGoal: 10000,
+    cal:   0, calGoal:   500,
+    active:0, activeGoal:30,
+  };
+
+  // Week history: array of 7 objects keyed by YYYY-MM-DD
+  // Each entry: { steps, cal, active }
+  let weekHistory = {};
+
+  // Streak data
+  let streakData = {
+    count: 0,
+    days: {},  // YYYY-MM-DD: true if goal hit
+    lastMarked: null,
+  };
+
+  let weekMetric = 'steps';
+
+  /* ─────────────────────────────────────
+     UTILITIES
+  ───────────────────────────────────── */
+  function todayKey() {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  }
+
+  function dateKey(daysAgo) {
+    const d = new Date();
+    d.setDate(d.getDate() - daysAgo);
+    return d.toISOString().slice(0, 10);
+  }
+
+  function last7Keys() {
+    return Array.from({length: 7}, (_, i) => dateKey(6 - i));
+  }
+
+  function countUp(el, from, to, duration, format) {
+    const start = performance.now();
+    function step(now) {
+      const t = Math.min((now - start) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const val = Math.round(from + (to - from) * ease);
+      el.textContent = format ? format(val) : val.toLocaleString();
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ─────────────────────────────────────
+     INIT
+  ───────────────────────────────────── */
+  function init() {
+    // Date header
+    const now = new Date();
+    document.getElementById('today-date').textContent =
+      now.toLocaleDateString('en-CA', { weekday:'short', month:'short', day:'numeric' }).toUpperCase();
+
+    // Load persisted data
+    try {
+      const s = localStorage.getItem('fitness-widget');
+      if (s) Object.assign(state, JSON.parse(s));
+      const wh = localStorage.getItem('fitness-week');
+      if (wh) weekHistory = JSON.parse(wh);
+      const sd = localStorage.getItem('fitness-streak');
+      if (sd) streakData = JSON.parse(sd);
+    } catch(e) {}
+
+    // URL params (Shortcuts bridge)
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('steps'))  state.steps  = parseInt(params.get('steps'))  || state.steps;
+    if (params.has('cal'))    state.cal    = parseInt(params.get('cal'))    || state.cal;
+    if (params.has('min'))    state.active = parseInt(params.get('min'))    || state.active;
+    if (params.has('gsteps')) state.stepsGoal  = parseInt(params.get('gsteps'))  || state.stepsGoal;
+    if (params.has('gcal'))   state.calGoal    = parseInt(params.get('gcal'))    || state.calGoal;
+    if (params.has('gmin'))   state.activeGoal = parseInt(params.get('gmin'))    || state.activeGoal;
+
+    // Save today into week history
+    weekHistory[todayKey()] = {
+      steps: state.steps,
+      cal:   state.cal,
+      active:state.active,
+    };
+    localStorage.setItem('fitness-week', JSON.stringify(weekHistory));
+
+    // Pre-fill inputs
+    document.getElementById('in-steps').value    = state.steps  || '';
+    document.getElementById('in-cal').value      = state.cal    || '';
+    document.getElementById('in-active').value   = state.active || '';
+    document.getElementById('goal-steps').value  = state.stepsGoal;
+    document.getElementById('goal-cal').value    = state.calGoal;
+    document.getElementById('goal-active').value = state.activeGoal;
+
+    setTimeout(() => {
+      render(true);
+      renderStreak(true);
+      renderWeekBars(true);
+    }, 120);
+  }
+
+  /* ─────────────────────────────────────
+     GAUGES
+  ───────────────────────────────────── */
+  function render(animate) {
+    setGauge('steps',  state.steps,  state.stepsGoal,  animate);
+    setGauge('cal',    state.cal,    state.calGoal,    animate);
+    setGauge('active', state.active, state.activeGoal, animate);
+    document.getElementById('steps-goal-display').textContent  = state.stepsGoal.toLocaleString();
+    document.getElementById('cal-goal-display').textContent    = state.calGoal.toLocaleString();
+    document.getElementById('active-goal-display').textContent = state.activeGoal.toLocaleString();
+  }
+
+  function setGauge(key, value, goal, animate) {
+    const pct    = Math.min(value / goal, 1);
+    const offset = CIRCUMFERENCE * (1 - pct);
+    const el     = document.getElementById(key + '-display');
+    if (animate) countUp(el, 0, value, 1200);
+    else el.textContent = value.toLocaleString();
+    document.getElementById(key + '-arc').style.strokeDashoffset = offset;
+    const pctEl = document.getElementById(key + '-pct');
+    if (animate) countUp(pctEl, 0, Math.round(pct * 100), 1200);
+    else pctEl.textContent = Math.round(pct * 100);
+  }
+
+  /* ─────────────────────────────────────
+     STREAK
+  ───────────────────────────────────── */
+  function renderStreak(animate) {
+    // Number
+    const numEl = document.getElementById('streak-num');
+    if (animate) countUp(numEl, 0, streakData.count, 900);
+    else numEl.textContent = streakData.count;
+
+    // Flame: hide if 0 streak
+    document.getElementById('streak-flame').style.opacity = streakData.count === 0 ? '0.2' : '1';
+
+    // Dots
+    const keys = last7Keys();
+    const today = todayKey();
+    const container = document.getElementById('streak-dots');
+    container.innerHTML = '';
+
+    keys.forEach((key, i) => {
+      const dayIndex = new Date(key + 'T12:00:00').getDay();
+      const hit = !!streakData.days[key];
+      const isToday = key === today;
+
+      const wrap = document.createElement('div');
+      wrap.className = 'streak-dot-wrap';
+
+      const dot = document.createElement('div');
+      dot.className = 'streak-dot' + (hit ? ' hit' : '') + (isToday ? ' today-dot' : '');
+      dot.textContent = hit ? '✓' : '';
+
+      const lbl = document.createElement('div');
+      lbl.className = 'streak-day-label' + (isToday ? ' today-lbl' : '');
+      lbl.textContent = SHORT_DAYS[dayIndex];
+
+      wrap.appendChild(dot);
+      wrap.appendChild(lbl);
+      container.appendChild(wrap);
+    });
+
+    // Button state
+    const btn = document.getElementById('btn-streak');
+    const alreadyDone = !!streakData.days[today];
+    if (alreadyDone) {
+      btn.textContent = '✓ Today complete';
+      btn.classList.add('done');
+    } else {
+      btn.textContent = 'Mark today complete';
+      btn.classList.remove('done');
+    }
+  }
+
+  function markToday() {
+    const today = todayKey();
+    if (streakData.days[today]) return; // already marked
+
+    streakData.days[today] = true;
+
+    // Recalculate streak: count backwards from today
+    let count = 0;
+    let checkDate = new Date();
+    while (true) {
+      const k = checkDate.toISOString().slice(0, 10);
+      if (streakData.days[k]) {
+        count++;
+        checkDate.setDate(checkDate.getDate() - 1);
+      } else {
+        break;
+      }
+    }
+    streakData.count = count;
+    streakData.lastMarked = today;
+
+    localStorage.setItem('fitness-streak', JSON.stringify(streakData));
+    renderStreak(true);
+  }
+
+  /* ─────────────────────────────────────
+     WEEKLY BARS
+  ───────────────────────────────────── */
+  function setWeekMetric(metric, btn) {
+    weekMetric = metric;
+    document.querySelectorAll('.week-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderWeekBars(false);
+  }
+
+  function renderWeekBars(animate) {
+    const keys   = last7Keys();
+    const today  = todayKey();
+    const area   = document.getElementById('bars-area');
+    area.innerHTML = '';
+
+    const goals = { steps: state.stepsGoal, cal: state.calGoal, active: state.activeGoal };
+    const goal  = goals[weekMetric];
+
+    // Find max value for scaling
+    let maxVal = goal;
+    keys.forEach(k => {
+      const d = weekHistory[k];
+      if (d && d[weekMetric] > maxVal) maxVal = d[weekMetric];
+    });
+
+    keys.forEach((key, i) => {
+      const dayIndex = new Date(key + 'T12:00:00').getDay();
+      const data     = weekHistory[key];
+      const val      = data ? (data[weekMetric] || 0) : 0;
+      const isToday  = key === today;
+      const isFuture = key > today;
+      const heightPct = isFuture ? 0 : Math.min(val / maxVal, 1);
+      const goalPct   = Math.min(goal / maxVal, 1);
+      const hit = !isFuture && val >= goal;
+
+      const col = document.createElement('div');
+      col.className = 'bar-col';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'bar-wrap';
+
+      const bar = document.createElement('div');
+      bar.className = 'bar' + (isFuture ? ' future' : (hit ? ' hit' : ' missed')) + (isToday ? ' today' : '');
+      bar.style.height = (heightPct * 84) + 'px';
+
+      if (animate) {
+        bar.style.transform = 'scaleY(0)';
+        const delay = i * 60;
+        setTimeout(() => { bar.style.transform = 'scaleY(1)'; }, delay + 80);
+      } else {
+        bar.style.transform = 'scaleY(1)';
+      }
+
+      const lbl = document.createElement('div');
+      lbl.className = 'bar-label' + (isToday ? ' today-lbl' : '');
+      lbl.textContent = SHORT_DAYS[dayIndex];
+
+      wrap.appendChild(bar);
+      col.appendChild(wrap);
+      col.appendChild(lbl);
+      area.appendChild(col);
+    });
+  }
+
+  /* ─────────────────────────────────────
+     APPLY UPDATE
+  ───────────────────────────────────── */
+  function applyUpdate() {
+    state.steps  = parseInt(document.getElementById('in-steps').value)  || 0;
+    state.cal    = parseInt(document.getElementById('in-cal').value)    || 0;
+    state.active = parseInt(document.getElementById('in-active').value) || 0;
+    state.stepsGoal  = parseInt(document.getElementById('goal-steps').value)  || 10000;
+    state.calGoal    = parseInt(document.getElementById('goal-cal').value)    || 500;
+    state.activeGoal = parseInt(document.getElementById('goal-active').value) || 30;
+
+    // Update today in week history
+    weekHistory[todayKey()] = {
+      steps: state.steps,
+      cal:   state.cal,
+      active:state.active,
+    };
+
+    localStorage.setItem('fitness-widget', JSON.stringify(state));
+    localStorage.setItem('fitness-week', JSON.stringify(weekHistory));
+
+    render(true);
+    renderWeekBars(true);
+
+    const ts = new Date().toLocaleTimeString('en-CA', { hour:'2-digit', minute:'2-digit' });
+    const upd = document.getElementById('last-updated');
+    upd.textContent = `updated ${ts}`;
+    upd.style.display = 'block';
+  }
+
+  init();
+</script>
+</body>
+</html>
